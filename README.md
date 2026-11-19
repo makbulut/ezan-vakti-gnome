@@ -44,3 +44,7 @@ Panel menüsü → **Ayarlar** (veya `gnome-extensions prefs ezan-vakti@mehmetak
 kerahat hatırlatması (kerahat başlangıcı ve bildirim dk). Ayarlar GSettings'te:
 `org.gnome.shell.extensions.ezan-vakti` (schema `schemas/` altında; geliştirmede
 `glib-compile-schemas ezan-vakti@mehmetakbulut.com.tr/schemas` çalıştır).
+
+## Lisans
+
+GPL-2.0-or-later — bkz. [LICENSE](LICENSE). Copyright (C) 2026 Mehmet Akbulut.
