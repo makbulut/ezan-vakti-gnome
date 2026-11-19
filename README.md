@@ -57,6 +57,8 @@ Panel'deki ezan vaktine tıkla → **Ayarlar**, veya:
 gnome-extensions prefs ezan-vakti@mehmetakbulut.com.tr
 ```
 
+<img src="docs/ayarlar.png" alt="Ayarlar penceresi" width="420">
+
 | Ayar | Açıklama |
 |---|---|
 | Ülke / İl / İlçe | Vakitlerin alınacağı konum (varsayılan: İstanbul) |
