@@ -12,15 +12,15 @@ Test edilen: GNOME Shell 50 (Ubuntu, Wayland).
 
 ## Kurulum (geliştirme)
 
-Kurulu eklenti dizini bu repodaki dizine symlink:
+Kurulu dizin repoya symlink DEĞİL; kod değişince paket üretilip normal eklenti gibi kurulur:
 
-    ln -s ~/workspace/mehmet/ezan-vakti-gnome/ezan-vakti@mehmetakbulut.com.tr \
-          ~/.local/share/gnome-shell/extensions/ezan-vakti@mehmetakbulut.com.tr
-    gnome-extensions enable ezan-vakti@mehmetakbulut.com.tr   # yeni kurulumda önce logout/login
+    tools/install.sh        # pack + gnome-extensions install --force
+
+İlk kurulumda `gnome-extensions enable ezan-vakti@mehmetakbulut.com.tr` (veya logout/login).
 
 ## Logout'suz yeniden yükleme
 
-`tools/ezan-reload` (~/bin/ezan-reload symlink) eklentiyi her seferinde yeni bir dizine kopyalar
+`tools/ezan-reload` (~/bin/ezan-reload symlink) kurulu eklentiyi her seferinde yeni bir dizine kopyalar
 (GJS modül cache'ini aşmak için). Alt+F2 → `lg` → şunu çalıştır:
 
     (async()=>{const em=Main.extensionManager,u='ezan-vakti@mehmetakbulut.com.tr';const [,o]=GLib.spawn_command_line_sync(GLib.get_home_dir()+'/bin/ezan-reload');const p=new TextDecoder().decode(o);const x=em.lookup(u);if(x)await em.unloadExtension(x);await em.loadExtension(em.createExtensionObject(u,Gio.File.new_for_path(p),2));})()
