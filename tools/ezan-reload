@@ -1,0 +1,13 @@
+#!/bin/bash
+# Ezan Vakti eklentisini logout'suz yeniden yüklemek için yeni bir kopya hazırlar.
+# GJS modülleri URI'ye göre cache'lediği için her seferinde farklı bir dizine kopyalanır.
+set -e
+UUID=ezan-vakti@mehmet.local
+SRC=~/.local/share/gnome-shell/extensions/$UUID
+BASE=~/.cache/ezan-vakti/dev
+DST=$BASE/$(date +%s)/$UUID
+mkdir -p "$DST"
+cp -r "$SRC"/. "$DST"/
+# eski kopyaları temizle (son 3'ü kalsın)
+ls -1d "$BASE"/*/ 2>/dev/null | sort | head -n -3 | xargs -r rm -rf
+echo -n "$DST"

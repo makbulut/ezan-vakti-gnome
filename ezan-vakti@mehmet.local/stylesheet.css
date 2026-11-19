@@ -1,0 +1,12 @@
+.ezan-pill {
+  background-color: rgba(255,255,255,0.92);
+  border-radius: 999px;
+  padding: 1px 10px;
+  margin: 3px 0;
+}
+.ezan-city  { color: #7a4a14; font-weight: bold; font-size: 0.85em; }
+.ezan-dot   { color: #999; font-size: 0.85em; }
+.ezan-next  { color: #222; font-weight: bold; font-size: 0.85em; }
+.ezan-left  { color: #555; font-size: 0.85em; }
+.ezan-leftv { color: #b5521b; font-weight: bold; font-size: 0.85em; }
+.ezan-row-next { font-weight: bold; color: #e8a33d; }
