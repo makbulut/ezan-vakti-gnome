@@ -14,28 +14,28 @@ Test edilen: GNOME Shell 50 (Ubuntu, Wayland).
 
 Kurulu eklenti dizini bu repodaki dizine symlink:
 
-    ln -s ~/workspace/mehmet/ezan-vakti-gnome/ezan-vakti@mehmet.local \
-          ~/.local/share/gnome-shell/extensions/ezan-vakti@mehmet.local
-    gnome-extensions enable ezan-vakti@mehmet.local   # yeni kurulumda önce logout/login
+    ln -s ~/workspace/mehmet/ezan-vakti-gnome/ezan-vakti@mehmetakbulut.com.tr \
+          ~/.local/share/gnome-shell/extensions/ezan-vakti@mehmetakbulut.com.tr
+    gnome-extensions enable ezan-vakti@mehmetakbulut.com.tr   # yeni kurulumda önce logout/login
 
 ## Logout'suz yeniden yükleme
 
 `tools/ezan-reload` (~/bin/ezan-reload symlink) eklentiyi her seferinde yeni bir dizine kopyalar
 (GJS modül cache'ini aşmak için). Alt+F2 → `lg` → şunu çalıştır:
 
-    (async()=>{const em=Main.extensionManager,u='ezan-vakti@mehmet.local';const [,o]=GLib.spawn_command_line_sync(GLib.get_home_dir()+'/bin/ezan-reload');const p=new TextDecoder().decode(o);await em.unloadExtension(em.lookup(u));await em.loadExtension(em.createExtensionObject(u,Gio.File.new_for_path(p),2));})()
+    (async()=>{const em=Main.extensionManager,u='ezan-vakti@mehmetakbulut.com.tr';const [,o]=GLib.spawn_command_line_sync(GLib.get_home_dir()+'/bin/ezan-reload');const p=new TextDecoder().decode(o);const x=em.lookup(u);if(x)await em.unloadExtension(x);await em.loadExtension(em.createExtensionObject(u,Gio.File.new_for_path(p),2));})()
 
 Not: `metadata.json` içindeki `version` değişirse GNOME yeniden yüklemeyi reddeder; o zaman logout gerekir.
 
 ## Paketleme
 
-    tools/pack.sh      # dist/ezan-vakti@mehmet.local.shell-extension.zip
+    tools/pack.sh      # dist/ezan-vakti@mehmetakbulut.com.tr.shell-extension.zip
 
 Karşı tarafta:
 
-    gnome-extensions install ezan-vakti@mehmet.local.shell-extension.zip
+    gnome-extensions install ezan-vakti@mehmetakbulut.com.tr.shell-extension.zip
     # logout/login, sonra:
-    gnome-extensions enable ezan-vakti@mehmet.local
+    gnome-extensions enable ezan-vakti@mehmetakbulut.com.tr
 
 ## Ayarlar
 

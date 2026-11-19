@@ -3,5 +3,5 @@
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p dist
-gnome-extensions pack ezan-vakti@mehmet.local --force --out-dir=dist
+gnome-extensions pack ezan-vakti@mehmetakbulut.com.tr --force --out-dir=dist
 ls -l dist/
