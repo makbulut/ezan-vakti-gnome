@@ -1,7 +1,7 @@
 {
   "uuid": "ezan-vakti@mehmetakbulut.com.tr",
   "name": "Ezan Vakti",
-  "description": "Üst çubukta bir sonraki ezan vakti ve kalan süre (Diyanet vakitleri)",
+  "description": "Üst çubukta bir sonraki ezan vaktini ve kalan süreyi gösterir. Vakitler Diyanet İşleri Başkanlığı'ndan alınır. Ezan öncesi ve kerahat öncesi bildirim, ülke/il/ilçe seçimi.\n\nShows the next Islamic prayer time and the remaining time in the top bar, using official times from the Turkish Presidency of Religious Affairs (Diyanet). Notifications before each prayer and before the kerahat time; location can be chosen from all places Diyanet supports.",
   "shell-version": [
     "45",
     "46",
@@ -11,5 +11,6 @@
     "50"
   ],
   "version": 1,
-  "settings-schema": "org.gnome.shell.extensions.ezan-vakti"
+  "settings-schema": "org.gnome.shell.extensions.ezan-vakti",
+  "url": "https://github.com/makbulut/ezan-vakti-gnome"
 }

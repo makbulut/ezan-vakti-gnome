@@ -63,6 +63,8 @@ class EzanIndicator extends PanelMenu.Button {
         this._gen = 0;
         this._days = {};
         this._session = new Soup.Session({timeout: 20});
+        this._cancellable = new Gio.Cancellable();
+        this._cacheReady = false;
         this._fetching = false;
         this._lastFetchTry = 0;
 
@@ -140,11 +142,46 @@ class EzanIndicator extends PanelMenu.Button {
             if (d.MiladiTarihKisa) this._days[d.MiladiTarihKisa] = d;
     }
 
+    // Önbelleği asenkron oku; bitince ekranı güncelle ve gerekirse indir
     _loadCache() {
-        try {
-            const [ok, bytes] = GLib.file_get_contents(cacheFile(this._ilce));
-            if (ok) this._ingest(JSON.parse(new TextDecoder().decode(bytes)));
-        } catch (_) {}
+        const gen = this._gen;
+        this._cacheReady = false;
+        const file = Gio.File.new_for_path(cacheFile(this._ilce));
+        file.load_contents_async(this._cancellable, (f, res) => {
+            if (!this._session || gen !== this._gen) return;
+            try {
+                const [, bytes] = f.load_contents_finish(res);
+                this._ingest(JSON.parse(new TextDecoder().decode(bytes)));
+            } catch (_) {
+                // önbellek yok veya bozuk: internetten indirilecek
+            }
+            this._cacheReady = true;
+            this._tick();
+        });
+    }
+
+    _saveCache() {
+        const id = this._ilce;
+        const data = new GLib.Bytes(new TextEncoder().encode(JSON.stringify(Object.values(this._days))));
+        const write = () => {
+            Gio.File.new_for_path(cacheFile(id)).replace_contents_bytes_async(
+                data, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, this._cancellable, (f, res) => {
+                    try {
+                        f.replace_contents_finish(res);
+                    } catch (e) {
+                        if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                            console.warn(`[ezan-vakti] önbellek yazılamadı: ${e.message}`);
+                    }
+                });
+        };
+        Gio.File.new_for_path(CACHE_DIR).make_directory_async(GLib.PRIORITY_DEFAULT, this._cancellable, (d, res) => {
+            try {
+                d.make_directory_finish(res);
+            } catch (_) {
+                // zaten var
+            }
+            if (this._session) write();
+        });
     }
 
     _get(url, cb) {
@@ -165,12 +202,7 @@ class EzanIndicator extends PanelMenu.Button {
 
     _store(arr, source) {
         for (const d of arr) this._days[d.MiladiTarihKisa] = d;
-        try {
-            GLib.mkdir_with_parents(CACHE_DIR, 0o755);
-            GLib.file_set_contents(cacheFile(this._ilce), JSON.stringify(Object.values(this._days)));
-        } catch (e) {
-            console.warn(`[ezan-vakti] cache yazılamadı: ${e.message}`);
-        }
+        this._saveCache();
         console.log(`[ezan-vakti] ${arr.length} gün alındı (${source})`);
         this._tick();
     }
@@ -221,7 +253,7 @@ class EzanIndicator extends PanelMenu.Button {
         const now = new Date();
         const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         const in3 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
-        if (!this._days[dayKey(now)] || !this._days[dayKey(in3)]) this._fetch();
+        if (this._cacheReady && (!this._days[dayKey(now)] || !this._days[dayKey(in3)])) this._fetch();
 
         const today = this._times(now);
         if (!today) {
@@ -280,8 +312,11 @@ class EzanIndicator extends PanelMenu.Button {
         this._settingsIds = null;
         if (this._timer) GLib.source_remove(this._timer);
         this._timer = 0;
+        this._cancellable?.cancel();
+        this._cancellable = null;
         this._session?.abort();
         this._session = null;
+        this._settings = null;
         super.destroy();
     }
 });
