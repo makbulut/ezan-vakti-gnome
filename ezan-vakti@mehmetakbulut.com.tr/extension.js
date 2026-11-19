@@ -12,10 +12,9 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 // Birincil kaynak: Diyanet'in kendi sitesi (haftalık + aylık + yıllık tablo).
 // Yedek: ezanvakti.emushaf.net (Diyanet verisinin aynası, ~30 gün).
-const ILCE_ID = '9545';      // PENDİK
-const CITY = 'PENDİK';
-const DIYANET_URL = `https://namazvakitleri.diyanet.gov.tr/tr-TR/${ILCE_ID}`;
-const MIRROR_URL = `https://ezanvakti.emushaf.net/vakitler/${ILCE_ID}`;
+// Konum ve bildirim ayarları GSettings'te (prefs.js).
+const diyanetUrl = id => `https://namazvakitleri.diyanet.gov.tr/tr-TR/${id}`;
+const mirrorUrl = id => `https://ezanvakti.emushaf.net/vakitler/${id}`;
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz',
     'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
@@ -40,17 +39,12 @@ function parseDiyanetHtml(html) {
     return out;
 }
 const CACHE_DIR = GLib.build_filenamev([GLib.get_user_cache_dir(), 'ezan-vakti']);
-const CACHE_FILE = GLib.build_filenamev([CACHE_DIR, `${ILCE_ID}.json`]);
+const cacheFile = id => GLib.build_filenamev([CACHE_DIR, `${id}.json`]);
 
 const VAKITLER = [
     ['Imsak', 'İmsak'], ['Gunes', 'Güneş'], ['Ogle', 'Öğle'],
     ['Ikindi', 'İkindi'], ['Aksam', 'Akşam'], ['Yatsi', 'Yatsı'],
 ];
-
-const NOTIFY_MIN = 10;              // ezana kaç dk kala bildirim
-const NO_NOTIFY = ['Güneş'];        // ezan okunmayan vakit
-const KERAHAT_MIN = 45;             // Diyanet: akşamdan ~45 dk önce kerahat başlar
-const KERAHAT_NOTIFY_MIN = 10;      // kerahate kaç dk kala bildirim
 
 const pad = n => String(n).padStart(2, '0');
 const dayKey = d => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
@@ -58,8 +52,12 @@ const dayKey = d => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYea
 // Her yüklemede benzersiz GType adı: logout'suz yeniden yüklemede (ezan-reload) çakışmasın
 const EzanIndicator = GObject.registerClass({GTypeName: `EzanIndicator_${Date.now()}`},
 class EzanIndicator extends PanelMenu.Button {
-    _init() {
+    _init(ext) {
         super._init(0.5, 'Ezan Vakti');
+        this._ext = ext;
+        this._settings = ext.getSettings();
+        this._ilce = this._settings.get_string('district-id');
+        this._gen = 0;
         this._days = {};
         this._session = new Soup.Session({timeout: 20});
         this._fetching = false;
@@ -71,8 +69,9 @@ class EzanIndicator extends PanelMenu.Button {
             box.add_child(l);
             return l;
         };
-        mk('ezan-city').text = CITY;
-        mk('ezan-dot').text = '  ·  ';
+        this._city = mk('ezan-city');
+        this._dot = mk('ezan-dot');
+        this._dot.text = '  ·  ';
         this._next = mk('ezan-next');
         mk('ezan-left').text = '    Kalan: ';
         this._left = mk('ezan-leftv');
@@ -93,6 +92,17 @@ class EzanIndicator extends PanelMenu.Button {
         const refresh = new PopupMenu.PopupMenuItem('Vakitleri yenile');
         refresh.connect('activate', () => this._fetch(true));
         this.menu.addMenuItem(refresh);
+        const prefs = new PopupMenu.PopupMenuItem('Ayarlar');
+        prefs.connect('activate', () => this._ext.openPreferences());
+        this.menu.addMenuItem(prefs);
+
+        this._updateCity();
+        this._settingsIds = [
+            this._settings.connect('changed::district-id', () => this._onDistrictChanged()),
+            this._settings.connect('changed::district-name', () => this._updateCity()),
+            this._settings.connect('changed::show-city', () => this._updateCity()),
+            this._settings.connect('changed', () => this._tick()),
+        ];
 
         this._loadCache();
         this._tick();
@@ -102,6 +112,26 @@ class EzanIndicator extends PanelMenu.Button {
         });
     }
 
+    _updateCity() {
+        const show = this._settings.get_boolean('show-city');
+        this._city.text = this._settings.get_string('district-name');
+        this._city.visible = show;
+        this._dot.visible = show;
+    }
+
+    _onDistrictChanged() {
+        const id = this._settings.get_string('district-id');
+        if (!id || id === this._ilce) return;
+        this._ilce = id;
+        this._gen++;                 // yoldaki eski istekleri geçersiz kıl
+        this._fetching = false;
+        this._days = {};
+        this._notified = this._notifiedKerahat = null;
+        this._loadCache();
+        this._fetch(true);
+        this._tick();
+    }
+
     _ingest(arr) {
         for (const d of arr)
             if (d.MiladiTarihKisa) this._days[d.MiladiTarihKisa] = d;
@@ -109,7 +139,7 @@ class EzanIndicator extends PanelMenu.Button {
 
     _loadCache() {
         try {
-            const [ok, bytes] = GLib.file_get_contents(CACHE_FILE);
+            const [ok, bytes] = GLib.file_get_contents(cacheFile(this._ilce));
             if (ok) this._ingest(JSON.parse(new TextDecoder().decode(bytes)));
         } catch (_) {}
     }
@@ -134,7 +164,7 @@ class EzanIndicator extends PanelMenu.Button {
         for (const d of arr) this._days[d.MiladiTarihKisa] = d;
         try {
             GLib.mkdir_with_parents(CACHE_DIR, 0o755);
-            GLib.file_set_contents(CACHE_FILE, JSON.stringify(Object.values(this._days)));
+            GLib.file_set_contents(cacheFile(this._ilce), JSON.stringify(Object.values(this._days)));
         } catch (e) {
             console.warn(`[ezan-vakti] cache yazılamadı: ${e.message}`);
         }
@@ -147,7 +177,9 @@ class EzanIndicator extends PanelMenu.Button {
         if (!this._session || this._fetching || (!force && now - this._lastFetchTry < 60 * 60 * 1000)) return;
         this._fetching = true;
         this._lastFetchTry = now;
-        this._get(DIYANET_URL, html => {
+        const gen = this._gen, id = this._ilce;
+        this._get(diyanetUrl(id), html => {
+            if (gen !== this._gen || !this._session) return;
             const arr = html ? parseDiyanetHtml(html) : [];
             if (arr.length) {
                 this._store(arr, 'diyanet');
@@ -161,7 +193,8 @@ class EzanIndicator extends PanelMenu.Button {
             } else {
                 console.warn('[ezan-vakti] Diyanet sayfası okunamadı, yedek kaynağa geçiliyor');
             }
-            this._get(MIRROR_URL, text => {
+            this._get(mirrorUrl(id), text => {
+                if (gen !== this._gen || !this._session) return;
                 this._fetching = false;
                 try {
                     const arr2 = JSON.parse(text).filter(d => d.MiladiTarihKisa);
@@ -204,9 +237,12 @@ class EzanIndicator extends PanelMenu.Button {
             this._next.text = `${next.name} ${next.str}`;
             this._left.text = h > 0 ? `${h} sa ${m} dk` : `${m} dk`;
             const key = `${dayKey(next.t)} ${next.name}`;
-            if (mins <= NOTIFY_MIN && this._notified !== key && !NO_NOTIFY.includes(next.name)) {
+            const st = this._settings;
+            if (st.get_boolean('notify-enabled') && mins <= st.get_int('notify-minutes') &&
+                this._notified !== key && (next.name !== 'Güneş' || st.get_boolean('notify-gunes'))) {
                 this._notified = key;
-                Main.notify(`${next.name} ezanına ${mins} dk kaldı`, `${CITY} · ${next.name} ${next.str}`);
+                const title = next.name === 'Güneş' ? `Güneş doğuşuna ${mins} dk kaldı` : `${next.name} ezanına ${mins} dk kaldı`;
+                Main.notify(title, `${st.get_string('district-name')} · ${next.name} ${next.str}`);
             }
         } else {
             this._next.text = '?';
@@ -214,11 +250,11 @@ class EzanIndicator extends PanelMenu.Button {
         }
 
         const aksam = today.find(v => v.name === 'Akşam');
-        if (aksam) {
-            const kerahat = new Date(aksam.t.getTime() - KERAHAT_MIN * 60000);
+        if (aksam && this._settings.get_boolean('kerahat-enabled')) {
+            const kerahat = new Date(aksam.t.getTime() - this._settings.get_int('kerahat-minutes') * 60000);
             const kMins = Math.ceil((kerahat - now) / 60000);
             const kKey = dayKey(now);
-            if (kMins > 0 && kMins <= KERAHAT_NOTIFY_MIN && this._notifiedKerahat !== kKey) {
+            if (kMins > 0 && kMins <= this._settings.get_int('kerahat-notify-minutes') && this._notifiedKerahat !== kKey) {
                 this._notifiedKerahat = kKey;
                 Main.notify(`Kerahat vaktine ${kMins} dk kaldı`,
                     `İkindiyi kılmadıysan acele et · Kerahat ${pad(kerahat.getHours())}:${pad(kerahat.getMinutes())} (Akşam ${aksam.str})`);
@@ -237,6 +273,8 @@ class EzanIndicator extends PanelMenu.Button {
     }
 
     destroy() {
+        this._settingsIds?.forEach(i => this._settings.disconnect(i));
+        this._settingsIds = null;
         if (this._timer) GLib.source_remove(this._timer);
         this._timer = 0;
         this._session?.abort();
@@ -247,7 +285,7 @@ class EzanIndicator extends PanelMenu.Button {
 
 export default class EzanVaktiExtension extends Extension {
     enable() {
-        this._indicator = new EzanIndicator();
+        this._indicator = new EzanIndicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 0, 'right');
     }
     disable() {

@@ -39,6 +39,8 @@ Karşı tarafta:
 
 ## Ayarlar
 
-`extension.js` başındaki sabitler: `ILCE_ID`, `CITY`, `NOTIFY_MIN`, `NO_NOTIFY`,
-`KERAHAT_MIN`, `KERAHAT_NOTIFY_MIN`. İlçe kodları: https://ezanvakti.emushaf.net/ilceler/<il_id>
-(İstanbul = 539, Pendik = 9545).
+Panel menüsü → **Ayarlar** (veya `gnome-extensions prefs ezan-vakti@mehmetakbulut.com.tr`):
+ülke / il / ilçe seçimi (Diyanet kodları), konum adını gösterme, ezan bildirimi (dk, Güneş dahil mi),
+kerahat hatırlatması (kerahat başlangıcı ve bildirim dk). Ayarlar GSettings'te:
+`org.gnome.shell.extensions.ezan-vakti` (schema `schemas/` altında; geliştirmede
+`glib-compile-schemas ezan-vakti@mehmetakbulut.com.tr/schemas` çalıştır).

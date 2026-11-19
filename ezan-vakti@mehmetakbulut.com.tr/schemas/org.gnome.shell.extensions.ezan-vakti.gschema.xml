@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ezan-vakti" path="/org/gnome/shell/extensions/ezan-vakti/">
+    <key name="country-id" type="s"><default>'2'</default><summary>Ülke kodu (Diyanet)</summary></key>
+    <key name="city-id" type="s"><default>'539'</default><summary>İl kodu (Diyanet)</summary></key>
+    <key name="district-id" type="s"><default>'9541'</default><summary>İlçe kodu (Diyanet)</summary></key>
+    <key name="district-name" type="s"><default>'İSTANBUL'</default><summary>Panelde görünen konum adı</summary></key>
+    <key name="show-city" type="b"><default>true</default><summary>Konum adını panelde göster</summary></key>
+    <key name="notify-enabled" type="b"><default>true</default><summary>Ezan öncesi bildirim</summary></key>
+    <key name="notify-minutes" type="i"><range min="1" max="120"/><default>10</default><summary>Ezana kaç dk kala bildirim</summary></key>
+    <key name="notify-gunes" type="b"><default>false</default><summary>Güneş vakti için de bildirim</summary></key>
+    <key name="kerahat-enabled" type="b"><default>true</default><summary>Kerahat öncesi ikindi hatırlatması</summary></key>
+    <key name="kerahat-minutes" type="i"><range min="10" max="90"/><default>45</default><summary>Kerahat akşamdan kaç dk önce başlar</summary></key>
+    <key name="kerahat-notify-minutes" type="i"><range min="1" max="60"/><default>10</default><summary>Kerahate kaç dk kala bildirim</summary></key>
+  </schema>
+</schemalist>
